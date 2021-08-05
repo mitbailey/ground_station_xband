@@ -23,7 +23,7 @@
 void *gs_network_rx_thread(void *args)
 {
     global_data_t *global_data = (global_data_t *)args;
-    NetworkData *network_data = global_data->network_data;
+    network_data_t *network_data = global_data->network_data;
 
     // TODO: Similar, if not identical, to the network functionality in ground_station.
     // Roof XBAND is a network client to the GS Server, and so should be very similar in socketry to ground_station.
@@ -170,7 +170,7 @@ void *gs_polling_thread(void *args)
     dbprintlf(BLUE_FG "Beginning polling thread.");
 
     global_data_t *global_data = (global_data_t *)args;
-    NetworkData *network_data = global_data->network_data;
+    network_data_t *network_data = global_data->network_data;
 
     while (network_data->rx_active)
     {
@@ -197,7 +197,7 @@ void *gs_polling_thread(void *args)
     return nullptr;
 }
 
-int gs_network_transmit(NetworkData *network_data, NETWORK_FRAME_TYPE type, NETWORK_FRAME_ENDPOINT endpoint, void *data, int data_size)
+int gs_network_transmit(network_data_t *network_data, NETWORK_FRAME_TYPE type, NETWORK_FRAME_ENDPOINT endpoint, void *data, int data_size)
 {
     if (data_size < 0)
     {
@@ -217,7 +217,7 @@ int gs_network_transmit(NetworkData *network_data, NETWORK_FRAME_TYPE type, NETW
 
 int gs_connect_to_server(global_data_t *global_data)
 {
-    NetworkData *network_data = global_data->network_data;
+    network_data_t *network_data = global_data->network_data;
     int connect_status = -1;
 
     dbprintlf(BLUE_FG "Attempting connection to %s:%d.", SERVER_IP, SERVER_PORT);

@@ -25,18 +25,10 @@ typedef struct
 {
     int thread_status;
     txmodem tx_modem[1];
-    NetworkData *network_data;
+    network_data_t network_data[1];
     bool tx_ready;
     uint8_t netstat;
 } global_data_t;
-
-// /**
-//  * @brief Listens for X-Band packets from SPACE-HAUC.
-//  *
-//  * @param args
-//  * @return void*
-//  */
-// void *gs_xband_tx_thread(void *args);
 
 /**
  * @brief Listens for NetworkFrames from the Ground Station Network.
@@ -75,7 +67,7 @@ void *gs_polling_thread(void *args);
  * @param data_size 
  * @return int 
  */
-int gs_network_transmit(NetworkData *network_data, NETWORK_FRAME_TYPE type, NETWORK_FRAME_ENDPOINT endpoint, void *data, int data_size);
+int gs_network_transmit(network_data_t *network_data, NETWORK_FRAME_TYPE type, NETWORK_FRAME_ENDPOINT endpoint, void *data, int data_size);
 
 /**
  * @brief 

@@ -48,11 +48,8 @@ enum NETWORK_FRAME_MODE
     CS_MODE_TX = 1
 };
 
-class NetworkData
+typedef struct
 {
-public:
-    NetworkData();
-
     // Network
     int socket;
     struct sockaddr_in serv_ip[1];
@@ -63,7 +60,40 @@ public:
 
     // Booleans
     bool rx_active; // Only able to receive when this is true.
-};
+} network_data_t;
+
+void network_data_init(network_data_t *network_data);
+
+typedef struct
+{
+    uint16_t guid;                                         // 0x1A1C
+    NETWORK_FRAME_ENDPOINT endpoint;                       // Where is this going?
+    NETWORK_FRAME_MODE mode;                               // RX or TX
+    int payload_size;                                      // Variably sized payload, this value tracks the size.
+    NETWORK_FRAME_TYPE type;                               // NULL, ACK, NACK, CONFIG, DATA, STATUS
+    uint16_t crc1;                                         // CRC16 of payload.
+    unsigned char payload[NETWORK_FRAME_MAX_PAYLOAD_SIZE]; // Constant sized payload.
+    uint16_t crc2;
+    uint8_t netstat;      // Network Status Information - Read by the client, set by the server: Bitmask - 0:Client, 1:RoofUHF, 2: RoofXB, 3: Haystack
+    uint16_t termination; // 0xAAAA
+} network_frame_t;
+
+// class NetworkData
+// {
+// public:
+//     NetworkData();
+
+//     // Network
+//     int socket;
+//     struct sockaddr_in serv_ip[1];
+//     bool connection_ready;
+//     char discon_reason[64];
+//     // char listening_ipv4[32];
+//     // int listening_port;
+
+//     // Booleans
+//     bool rx_active; // Only able to receive when this is true.
+// };
 
 class NetworkFrame
 {
@@ -125,7 +155,7 @@ public:
      * 
      * @return ssize_t Number of bytes sent if successful, negative on failure. 
      */
-    ssize_t sendFrame(NetworkData *network_data);
+    ssize_t sendFrame(network_data_t *network_data);
 
 private:
     uint16_t guid;                                         // 0x1A1C
