@@ -55,13 +55,9 @@ int main(int argc, char **argv)
         pthread_create(&net_polling_tid, NULL, gs_polling_thread, global_data->network_data);
         pthread_create(&net_rx_tid, NULL, gs_network_rx_thread, global_data);
 
-        // Initialize txmodem ID.
-        int txmodem_id = 0;
-        int txdma_id = 0;
-
         while (!global_data->tx_ready)
         {
-            if (txmodem_init(global_data->tx_modem, txmodem_id, txdma_id) > 0)
+            if (txmodem_init(global_data->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("tx_dma")) > 0)
             {
                 global_data->tx_ready = true;
             }

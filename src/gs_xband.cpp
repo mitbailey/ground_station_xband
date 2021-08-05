@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include "libiio.h"
 #include "gs_xband.hpp"
 #include "meb_debug.hpp"
 
@@ -106,7 +107,16 @@ void *gs_network_rx_thread(void *args)
                 case CS_TYPE_CONFIG_XBAND:
                 {
                     dbprintlf(BLUE_FG "Received an X-Band CONFIG frame!");
-                    // TODO: Config yourself.
+                    if (network_frame->getEndpoint() == CS_ENDPOINT_ROOFXBAND)
+                    {
+                        xband_set_data_t *config = (xband_set_data_t *)payload;
+                        // adradio_set_tx_lo(global_data->tx_modem, config->LO);
+                        // TODO: Figure out how to configure the X-Band radio.
+                    }
+                    else
+                    {
+                        dbprintlf("Received a configuration for Haystack!");
+                    }
                     break;
                 }
                 case CS_TYPE_DATA:
