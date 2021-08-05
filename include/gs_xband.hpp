@@ -17,13 +17,11 @@
 #include "txmodem.h"
 #include "network.hpp"
 
-#define SERVER_POLL_RATE 5 // Once per this many seconds
 #define SEC *1000000
-#define RECV_TIMEOUT 15
+#define SERVER_PORT 54220
 
 typedef struct
 {
-    int thread_status;
     txmodem tx_modem[1];
     network_data_t network_data[1];
     bool tx_ready;
