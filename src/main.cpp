@@ -51,6 +51,13 @@ int main(int argc, char **argv)
             }
         }
 
+        // Initialize adf4355 object.
+        bool adf_ready = true;
+        int adf_retval[3] = {-1};
+        adf_retval[0] = adf4355_init(global_data->ADF);
+        adf_retval[1] = adf4355_pw_up(global_data->ADF);
+        adf_retval[2] = adf4355_set_tx(global_data->ADF);
+
         // Start the threads.
         pthread_create(&net_polling_tid, NULL, gs_polling_thread, global_data->network_data);
         pthread_create(&net_rx_tid, NULL, gs_network_rx_thread, global_data);

@@ -13,8 +13,8 @@
 #define GS_XBAND_HPP
 
 #include <stdint.h>
-#include "rxmodem.h"
 #include "txmodem.h"
+#include "adf4355.h"
 #include "network.hpp"
 
 #define SEC *1000000
@@ -23,6 +23,7 @@
 typedef struct
 {
     txmodem tx_modem[1];
+    adf4355 ADF[1];
     network_data_t network_data[1];
     bool tx_ready;
     uint8_t netstat;
