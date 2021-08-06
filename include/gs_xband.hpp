@@ -30,6 +30,25 @@ typedef struct
 } global_data_t;
 
 /**
+ * @brief For configuring Roof X-Band / Haystack.
+ * 
+ */
+typedef struct
+{
+    int mode;               // SLEEP, FDD, TDD
+    int pll_freq;           // PLL Frequency
+    uint64_t LO;            // LO freq
+    uint64_t samp;          // sampling rate
+    uint64_t bw;            // bandwidth
+    char ftr_name[64];      // filter name
+    int temp;               // temperature
+    double rssi;            // RSSI
+    double gain;            // TX Gain
+    char curr_gainmode[16]; // fast_attack or slow_attack
+    bool pll_lock;
+} phy_config_t;
+
+/**
  * @brief X-Band data structure.
  * 
  * From line 113 of https://github.com/SPACE-HAUC/shflight/blob/flight_test/src/cmd_parser.c
@@ -37,7 +56,7 @@ typedef struct
  *  XBAND_SET_TX
  *  XBAND_SET_RX
  * 
- * Also, what the GUI Client sends to Roof X-Band / Haystack for configurations.
+ * FOR SPACE-HAUC USE ONLY
  * 
  */
 typedef struct __attribute__((packed))
