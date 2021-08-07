@@ -26,7 +26,52 @@ void *gs_network_rx_thread(void *args)
     global_data_t *global_data = (global_data_t *)args;
     network_data_t *network_data = global_data->network_data;
 
-    // TODO: Similar, if not identical, to the network functionality in ground_station.
+    while (!global_data->tx_ready)
+    {
+        // Init txmodem
+        // Init adf4355
+        // Init adradio_t
+        usleep(1 SEC);
+
+        // TODO: Confirm these are the correct c-strings.
+        // Initialize.
+        if (txmodem_init(global_data->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("rx_dma")) < 0)
+        {
+            dbprintlf(RED_FG "TX modem initialization failure.");
+            continue;
+        }
+
+        // Arm.
+        // if (txmodem_start(global_data->tx_modem < 0))
+        // {
+        //     dbprintlf(RED_FG "TX modem start failure.");
+        //     continue;
+        // }
+
+        // Initialize.
+        if (adf4355_init(global_data->ADF) < 0)
+        {
+            dbprintlf(RED_FG "ADF initialization failure.");
+            continue;
+        }
+
+        // Power up for TX.
+        if (adf4355_set_tx(global_data->ADF) < 0)
+        {
+            dbprintlf(RED_FG "ADF TX power-up failure.");
+            continue;
+        }
+
+        // Initialize.
+        if (adradio_init(global_data->radio) < 0)
+        {
+            dbprintlf(RED_FG "Radio initialization failure.");
+            continue;
+        }
+
+        global_data->tx_ready = true;
+    }
+
     // Roof XBAND is a network client to the GS Server, and so should be very similar in socketry to ground_station.
 
     while (network_data->rx_active)
@@ -109,13 +154,25 @@ void *gs_network_rx_thread(void *args)
                     dbprintlf(BLUE_FG "Received an X-Band CONFIG frame!");
                     if (network_frame->getEndpoint() == CS_ENDPOINT_ROOFXBAND)
                     {
-                        xband_set_data_t *config = (xband_set_data_t *)payload;
-                        // adradio_set_tx_lo(global_data->tx_modem, config->LO);
+                        phy_config_t *config = (phy_config_t *)payload;
                         // TODO: Figure out how to configure the X-Band radio.
+                        
+                        // RECONFIGURE XBAND
+                        adradio_set_ensm_mode(global_data->radio, (ensm_mode)config->mode);
+                        // TODO: set freq???
+                        adradio_set_tx_lo(global_data->radio, config->LO);
+                        adradio_set_samp(global_data->radio, config->samp);
+                        // TODO: Set bw (bandwidth)?
+                        // TODO: Set filter?
+                        // TODO: Set temp?
+                        // TODO: Set rssi?
+                        adradio_set_tx_hardwaregain(global_data->radio, config->gain);
+                        // TODO: Set curr_gainmode?
+                        // TODO: Set pll_lock?
                     }
                     else
                     {
-                        dbprintlf("Received a configuration for Haystack!");
+                        dbprintlf(YELLOW_FG "Incorrectly received a configuration for Haystack.");
                     }
                     break;
                 }

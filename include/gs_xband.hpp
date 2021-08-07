@@ -16,6 +16,7 @@
 #include "txmodem.h"
 #include "adf4355.h"
 #include "network.hpp"
+#include "libiio.h"
 
 #define SEC *1000000
 #define SERVER_PORT 54220
@@ -24,6 +25,8 @@ typedef struct
 {
     txmodem tx_modem[1];
     adf4355 ADF[1];
+    adradio_t radio[1];
+
     network_data_t network_data[1];
     bool tx_ready;
     uint8_t netstat;
