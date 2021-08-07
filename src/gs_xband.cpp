@@ -101,7 +101,7 @@ void *gs_network_rx_thread(void *args)
                     printf("%02x", buffer[i]);
                 }
                 printf("(END)\n");
-
+                
                 // Parse the data by mapping it to a NetworkFrame.
                 NetworkFrame *network_frame = (NetworkFrame *)buffer;
 
@@ -112,7 +112,7 @@ void *gs_network_rx_thread(void *args)
                     continue;
                 }
                 dbprintlf("Integrity check successful.");
-
+                
                 global_data->netstat = network_frame->getNetstat();
 
                 // For now, just print the Netstat.
