@@ -15,18 +15,13 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
-#include "libiio.h"
+// #include "libiio.h"
 #include "gs_xband.hpp"
 #include "meb_debug.hpp"
 
-// NOTE: int txmodem_write(txmodem *dev, uint8_t *buf, ssize_t size);
-
-void *gs_network_rx_thread(void *args)
+int gs_xband_transmit(global_data_t *global_data, txmodem *dev, uint8_t *buf, ssize_t size)
 {
-    global_data_t *global_data = (global_data_t *)args;
-    network_data_t *network_data = global_data->network_data;
-
-    while (!global_data->tx_ready)
+    if (!global_data->tx_ready)
     {
         // Init txmodem
         // Init adf4355
@@ -37,40 +32,45 @@ void *gs_network_rx_thread(void *args)
         // Initialize.
         if (txmodem_init(global_data->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("rx_dma")) < 0)
         {
-            dbprintlf(RED_FG "TX modem initialization failure.");
-            continue;
+            dbprintlf(FATAL "TX modem initialization failure.");
+            // continue;
+            return -1;
         }
-
-        // Arm.
-        // if (txmodem_start(global_data->tx_modem < 0))
-        // {
-        //     dbprintlf(RED_FG "TX modem start failure.");
-        //     continue;
-        // }
 
         // Initialize.
         if (adf4355_init(global_data->ADF) < 0)
         {
-            dbprintlf(RED_FG "ADF initialization failure.");
-            continue;
+            dbprintlf(FATAL "ADF initialization failure.");
+            // continue;
+            return -2;
         }
 
         // Power up for TX.
         if (adf4355_set_tx(global_data->ADF) < 0)
         {
-            dbprintlf(RED_FG "ADF TX power-up failure.");
-            continue;
+            dbprintlf(FATAL "ADF TX power-up failure.");
+            // continue;
+            return -3;
         }
 
         // Initialize.
         if (adradio_init(global_data->radio) < 0)
         {
-            dbprintlf(RED_FG "Radio initialization failure.");
-            continue;
+            dbprintlf(FATAL "Radio initialization failure.");
+            // continue;
+            return -4;
         }
 
         global_data->tx_ready = true;
     }
+    dbprintlf(GREEN_FG "Transmitting to SPACE-HAUC...");
+    return txmodem_write(dev, buf, size);
+}
+
+void *gs_network_rx_thread(void *args)
+{
+    global_data_t *global_data = (global_data_t *)args;
+    network_data_t *network_data = global_data->network_data;
 
     // Roof XBAND is a network client to the GS Server, and so should be very similar in socketry to ground_station.
 
@@ -152,6 +152,11 @@ void *gs_network_rx_thread(void *args)
                 case CS_TYPE_CONFIG_XBAND:
                 {
                     dbprintlf(BLUE_FG "Received an X-Band CONFIG frame!");
+                    if (!global_data->tx_ready)
+                    {
+                        dbprintlf(RED_FG "Cannot configure radio because no radio could be found!");
+                        break;
+                    }
                     if (network_frame->getEndpoint() == CS_ENDPOINT_ROOFXBAND)
                     {
                         phy_config_t *config = (phy_config_t *)payload;
@@ -181,7 +186,7 @@ void *gs_network_rx_thread(void *args)
                     dbprintlf(BLUE_FG "Received a DATA frame!");
                     if (global_data->tx_ready)
                     {
-                        int retval = txmodem_write(global_data->tx_modem, payload, payload_size);
+                        int retval = gs_xband_transmit(global_data, global_data->tx_modem, payload, payload_size);
                         dbprintlf("Transmitted to SPACE-HAUC (%d).", retval);
                     }
                     else
@@ -218,6 +223,12 @@ void *gs_network_rx_thread(void *args)
             strcpy(network_data->discon_reason, "TIMED-OUT");
             network_data->connection_ready = false;
             continue;
+        }
+        else if (errno == ETIMEDOUT)
+        {
+            dbprintlf(FATAL "ETIMEDOUT");
+            strcpy(network_data->discon_reason, "TIMED-OUT");
+            network_data->connection_ready = false;
         }
         erprintlf(errno);
     }

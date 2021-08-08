@@ -11,13 +11,21 @@
 
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
 #include "txmodem.h"
 #include "gs_xband.hpp"
 #include "meb_debug.hpp"
-#include "network.hpp"
 
 int main(int argc, char **argv)
 {
+    // Ignores broken pipe signal, which is sent to the calling process when writing to a nonexistent socket (
+    // see: https://www.linuxquestions.org/questions/programming-9/how-to-detect-broken-pipe-in-c-linux-292898/
+    // and 
+    // https://github.com/sunipkmukherjee/example_imgui_server_client/blob/master/guimain.cpp
+    // Allows manual handling of a broken pipe signal using 'if (errno == EPIPE) {...}'.
+    // Broken pipe signal will crash the process, and it caused by sending data to a closed socket.
+    signal(SIGPIPE, SIG_IGN);
+
     // Set up global data.
     global_data_t global_data[1] = {0};
     network_data_init(global_data->network_data, SERVER_PORT);
@@ -62,7 +70,9 @@ int main(int argc, char **argv)
     adf4355_pw_down(global_data->ADF);
     adf4355_destroy(global_data->ADF);
     adradio_destroy(global_data->radio);
-    
 
-    return 1;
+    // Destroy other things.
+    close(global_data->network_data->socket);
+
+    return global_data->network_data->thread_status;
 }
