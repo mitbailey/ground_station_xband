@@ -101,7 +101,7 @@ void *gs_network_rx_thread(void *args)
                     printf("%02x", buffer[i]);
                 }
                 printf("(END)\n");
-                
+
                 // Parse the data by mapping it to a NetworkFrame.
                 NetworkFrame *network_frame = (NetworkFrame *)buffer;
 
@@ -112,7 +112,7 @@ void *gs_network_rx_thread(void *args)
                     continue;
                 }
                 dbprintlf("Integrity check successful.");
-                
+
                 global_data->netstat = network_frame->getNetstat();
 
                 // For now, just print the Netstat.
@@ -161,7 +161,7 @@ void *gs_network_rx_thread(void *args)
                     {
                         phy_config_t *config = (phy_config_t *)payload;
                         // TODO: Figure out how to configure the X-Band radio.
-                        
+
                         // RECONFIGURE XBAND
                         adradio_set_ensm_mode(global_data->radio, (ensm_mode)config->mode);
                         // TODO: set freq???
@@ -193,6 +193,45 @@ void *gs_network_rx_thread(void *args)
                     {
                         dbprintlf(RED_FG "Cannot send received data, X-Band radio is not ready!");
                     }
+                    break;
+                }
+                case CS_TYPE_POLL_XBAND_CONFIG:
+                {
+                    dbprintlf(BLUE_FG "Received a request for configuration information!");
+
+                    phy_config_t config[1];
+                    memset(config, 0x0, sizeof(phy_config_t));
+                    adradio_get_tx_bw(global_data->radio, (long long *)&config->bw);
+                    adradio_get_tx_hardwaregain(global_data->radio, &config->gain);
+                    adradio_get_tx_lo(global_data->radio, (long long *)&config->LO);
+                    adradio_get_rssi(global_data->radio, &config->rssi);
+                    adradio_get_samp(global_data->radio, (long long *)&config->samp);
+                    adradio_get_temp(global_data->radio, (long long *)&config->temp);
+                    char buf[32];
+                    memset(buf, 0x0, 32);
+                    adradio_get_ensm_mode(global_data->radio, buf, sizeof(buf));
+                    if (strcmp(buf, "SLEEP") == 0)
+                    {
+                        config->mode = 0;
+                    }
+                    else if (strcmp(buf, "FDD") == 0)
+                    {
+                        config->mode = 1;
+                    }
+                    else if (strcmp(buf, "TDD") == 0)
+                    {
+                        config->mode = 2;
+                    }
+                    else
+                    {
+                        config->mode = -1;
+                    }
+
+                    NetworkFrame *network_frame = new NetworkFrame(CS_TYPE_POLL_XBAND_CONFIG, sizeof(phy_config_t));
+                    network_frame->storePayload(CS_ENDPOINT_CLIENT, config, sizeof(phy_config_t));
+                    network_frame->sendFrame(network_data);
+                    delete network_frame;
+
                     break;
                 }
                 case CS_TYPE_CONFIG_UHF:

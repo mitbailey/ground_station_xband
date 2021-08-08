@@ -21,6 +21,25 @@
 #define SEC *1000000
 #define SERVER_PORT 54220
 
+/**
+ * @brief X-Band configuration status information to be filled by the radios, sent to the server, and then to the client.
+ * 
+ */
+typedef struct
+{
+    int mode;               // 0:SLEEP, 1:FDD, 2:TDD
+    int pll_freq;           // PLL Frequency
+    uint64_t LO;            // LO freq
+    uint64_t samp;          // sampling rate
+    uint64_t bw;            // bandwidth
+    char ftr_name[64];      // filter name
+    int temp;               // temperature
+    double rssi;            // RSSI
+    double gain;            // TX Gain
+    char curr_gainmode[16]; // fast_attack or slow_attack
+    bool pll_lock;
+} phy_config_t;
+
 typedef struct
 {
     txmodem tx_modem[1];
