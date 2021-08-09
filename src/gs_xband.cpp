@@ -160,7 +160,13 @@ void *gs_network_rx_thread(void *args)
                     if (network_frame->getEndpoint() == CS_ENDPOINT_ROOFXBAND)
                     {
                         phy_config_t *config = (phy_config_t *)payload;
-                        // TODO: Figure out how to configure the X-Band radio.
+                        
+                        if (!global_data->tx_ready)
+                        {
+                            // TODO: Send a packet indicating this.
+                            dbprintlf(RED_FG "Cannot configure radio: radio not ready, does not exist, or failed to initialize.");
+                            break;
+                        }
 
                         // RECONFIGURE XBAND
                         adradio_set_ensm_mode(global_data->radio, (ensm_mode)config->mode);
@@ -181,6 +187,10 @@ void *gs_network_rx_thread(void *args)
                     }
                     break;
                 }
+                case CS_TYPE_XBAND_COMMAND:
+                {
+                    dbprintlf(BLUE_FG "Received an X-Band Radio command frame!");
+                }
                 case CS_TYPE_DATA:
                 {
                     dbprintlf(BLUE_FG "Received a DATA frame!");
@@ -199,14 +209,29 @@ void *gs_network_rx_thread(void *args)
                 {
                     dbprintlf(BLUE_FG "Received a request for configuration information!");
 
+                    if (!global_data->tx_ready)
+                    {
+                        // TODO: Send a packet indicating this.
+                        dbprintlf(RED_FG "Cannot get radio config: radio not ready, does not exist, or failed to initialize.");
+                        break;
+                    }
+
                     phy_config_t config[1];
+                    dbprintlf("Checkpoint.");
                     memset(config, 0x0, sizeof(phy_config_t));
-                    adradio_get_tx_bw(global_data->radio, (long long *)&config->bw);
+                    dbprintlf("Checkpoint.");
+                    adradio_get_tx_bw(global_data->radio, (long long *) &config->bw);
+                    dbprintlf("Checkpoint.");
                     adradio_get_tx_hardwaregain(global_data->radio, &config->gain);
+                    dbprintlf("Checkpoint.");
                     adradio_get_tx_lo(global_data->radio, (long long *)&config->LO);
+                    dbprintlf("Checkpoint.");
                     adradio_get_rssi(global_data->radio, &config->rssi);
+                    dbprintlf("Checkpoint.");
                     adradio_get_samp(global_data->radio, (long long *)&config->samp);
+                    dbprintlf("Checkpoint.");
                     adradio_get_temp(global_data->radio, (long long *)&config->temp);
+                    dbprintlf("Checkpoint.");
                     char buf[32];
                     memset(buf, 0x0, 32);
                     adradio_get_ensm_mode(global_data->radio, buf, sizeof(buf));

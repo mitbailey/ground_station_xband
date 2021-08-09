@@ -47,7 +47,7 @@ typedef struct
     adradio_t radio[1];
 
     network_data_t network_data[1];
-    bool tx_ready;
+    bool tx_ready; // This is the XBand Transmit, not network (that ready is in network_data)
     uint8_t netstat;
 } global_data_t;
 
