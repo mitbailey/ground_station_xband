@@ -37,6 +37,12 @@ int main(int argc, char **argv)
     // Create Ground Station Network thread IDs.
     pthread_t net_polling_tid, net_rx_tid;
 
+    // Try to initialize radio. This is checked on every attempted transmit, and init() is re-called from there if necessary.
+    if (gs_xband_init(global_data) < 0)
+    {
+        dbprintlf(RED_FG "Initial radio initialization failed!");
+    }
+
     // Start the RX threads, and restart them should it be necessary.
     // Only gets-out if a thread declares an unrecoverable emergency and sets its status to -1.
     while (global_data->network_data->thread_status > -1)
@@ -67,8 +73,8 @@ int main(int argc, char **argv)
     // Shutdown the X-Band radio.
     // txmodem_stop(global_data->tx_modem);
     txmodem_destroy(global_data->tx_modem);
-    adf4355_pw_down(global_data->ADF);
-    adf4355_destroy(global_data->ADF);
+    adf4355_pw_down(global_data->PLL);
+    adf4355_destroy(global_data->PLL);
     adradio_destroy(global_data->radio);
 
     // Destroy other things.

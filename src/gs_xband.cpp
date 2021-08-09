@@ -19,50 +19,51 @@
 #include "gs_xband.hpp"
 #include "meb_debug.hpp"
 
-int gs_xband_transmit(global_data_t *global_data, txmodem *dev, uint8_t *buf, ssize_t size)
+int gs_xband_init(global_data_t *global_data)
 {
-    if (!global_data->tx_ready)
+    if (!global_data->tx_modem_ready)
     {
-        // Init txmodem
-        // Init adf4355
-        // Init adradio_t
-        usleep(1 SEC);
-
-        // TODO: Confirm these are the correct c-strings.
-        // Initialize.
         if (txmodem_init(global_data->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("rx_dma")) < 0)
         {
-            dbprintlf(FATAL "TX modem initialization failure.");
-            // continue;
+            dbprintlf(RED_FG "TX modem initialization failure.");
             return -1;
         }
+        dbprintlf(GREEN_FG "TX modem initialized.");
+        global_data->tx_modem_ready = true;
+    }
 
-        // Initialize.
-        if (adf4355_init(global_data->ADF) < 0)
-        {
-            dbprintlf(FATAL "ADF initialization failure.");
-            // continue;
-            return -2;
-        }
-
-        // Power up for TX.
-        if (adf4355_set_tx(global_data->ADF) < 0)
-        {
-            dbprintlf(FATAL "ADF TX power-up failure.");
-            // continue;
-            return -3;
-        }
-
-        // Initialize.
+    if (!global_data->radio_ready)
+    {
         if (adradio_init(global_data->radio) < 0)
         {
-            dbprintlf(FATAL "Radio initialization failure.");
-            // continue;
-            return -4;
+            dbprintlf(RED_FG "Radio initialization failure.");
+            return -3;
         }
-
-        global_data->tx_ready = true;
+        dbprintlf(GREEN_FG "Radio initialized.");
+        global_data->radio_ready = true;
     }
+
+    dbprintlf(GREEN_FG "Automatic initialization complete.");
+    return 1;
+}
+
+int gs_xband_transmit(global_data_t *global_data, txmodem *dev, uint8_t *buf, ssize_t size)
+{
+    if (!global_data->tx_modem_ready || !global_data->radio_ready)
+    {
+        if (gs_xband_init(global_data) < 0)
+        {
+            dbprintlf(RED_FG "Transmission aborted, radio not initialized.");
+            return -1;
+        }
+    }
+
+    if (!global_data->PLL_ready)
+    {
+        dbprintlf(RED_FG "Transmission aborted, PLL not initialized by GUI client operator.");
+        return -2;
+    }
+
     dbprintlf(GREEN_FG "Transmitting to SPACE-HAUC...");
     return txmodem_write(dev, buf, size);
 }
@@ -152,21 +153,15 @@ void *gs_network_rx_thread(void *args)
                 case CS_TYPE_CONFIG_XBAND:
                 {
                     dbprintlf(BLUE_FG "Received an X-Band CONFIG frame!");
-                    if (!global_data->tx_ready)
+                    if (!global_data->radio_ready)
                     {
-                        dbprintlf(RED_FG "Cannot configure radio because no radio could be found!");
+                        // TODO: Send a packet indicating this.
+                        dbprintlf(RED_FG "Cannot configure radio: radio not ready, does not exist, or failed to initialize.");
                         break;
                     }
                     if (network_frame->getEndpoint() == CS_ENDPOINT_ROOFXBAND)
                     {
                         phy_config_t *config = (phy_config_t *)payload;
-                        
-                        if (!global_data->tx_ready)
-                        {
-                            // TODO: Send a packet indicating this.
-                            dbprintlf(RED_FG "Cannot configure radio: radio not ready, does not exist, or failed to initialize.");
-                            break;
-                        }
 
                         // RECONFIGURE XBAND
                         adradio_set_ensm_mode(global_data->radio, (ensm_mode)config->mode);
@@ -190,18 +185,62 @@ void *gs_network_rx_thread(void *args)
                 case CS_TYPE_XBAND_COMMAND:
                 {
                     dbprintlf(BLUE_FG "Received an X-Band Radio command frame!");
+                    XBAND_COMMAND *command = (XBAND_COMMAND *)payload;
+
+                    switch (*command)
+                    {
+                    case XBC_INIT_PLL:
+                    {
+                        dbprintlf("Received PLL Initialize command.");
+                        if (adf4355_init(global_data->PLL) < 0)
+                        {
+                            dbprintlf(RED_FG "PLL initialization failure.");
+                        }
+                        else if (adf4355_set_tx(global_data->PLL) < 0)
+                        {
+                            dbprintlf(RED_FG "PLL set TX failure.");
+                        }
+                        else
+                        {
+                            dbprintlf(GREEN_FG "PLL initialization success.");
+                            global_data->PLL_ready = true;
+                        }
+                        break;
+                    }
+                    case XBC_DISABLE_PLL:
+                    {
+                        dbprintlf("Received Disable PLL command.");
+                        if (adf4355_pw_down(global_data->PLL) < 0)
+                        {
+                            dbprintlf(RED_FG "PLL shutdown failure.");
+                        }
+                        else
+                        {
+                            dbprintlf(GREEN_FG "PLL shutdown success.");
+                        }
+                        break;
+                    }
+                    case XBC_ARM_RX:
+                    {
+                        dbprintlf("Received Arm RX command.");
+                        // Do nothing, not for us.
+                        break;
+                    }
+                    case XBC_DISARM_RX:
+                    {
+                        dbprintlf("Received Disarm RX command.");
+                        // Do nothing, not for us.
+                        break;
+                    }
+                    }
                 }
                 case CS_TYPE_DATA:
                 {
                     dbprintlf(BLUE_FG "Received a DATA frame!");
-                    if (global_data->tx_ready)
+                    int retval = gs_xband_transmit(global_data, global_data->tx_modem, payload, payload_size);
+                    if (retval < 0)
                     {
-                        int retval = gs_xband_transmit(global_data, global_data->tx_modem, payload, payload_size);
-                        dbprintlf("Transmitted to SPACE-HAUC (%d).", retval);
-                    }
-                    else
-                    {
-                        dbprintlf(RED_FG "Cannot send received data, X-Band radio is not ready!");
+                        // TODO: Send a packet notifying GUI client of a failed transmission. Status packet??
                     }
                     break;
                 }
@@ -209,51 +248,46 @@ void *gs_network_rx_thread(void *args)
                 {
                     dbprintlf(BLUE_FG "Received a request for configuration information!");
 
-                    if (!global_data->tx_ready)
+                    if (!global_data->radio_ready)
                     {
-                        // TODO: Send a packet indicating this.
+                        // TODO: Send a packet indicating this. Status packet??
                         dbprintlf(RED_FG "Cannot get radio config: radio not ready, does not exist, or failed to initialize.");
                         break;
                     }
 
-                    phy_config_t config[1];
-                    dbprintlf("Checkpoint.");
-                    memset(config, 0x0, sizeof(phy_config_t));
-                    dbprintlf("Checkpoint.");
-                    adradio_get_tx_bw(global_data->radio, (long long *) &config->bw);
-                    dbprintlf("Checkpoint.");
-                    adradio_get_tx_hardwaregain(global_data->radio, &config->gain);
-                    dbprintlf("Checkpoint.");
-                    adradio_get_tx_lo(global_data->radio, (long long *)&config->LO);
-                    dbprintlf("Checkpoint.");
-                    adradio_get_rssi(global_data->radio, &config->rssi);
-                    dbprintlf("Checkpoint.");
-                    adradio_get_samp(global_data->radio, (long long *)&config->samp);
-                    dbprintlf("Checkpoint.");
-                    adradio_get_temp(global_data->radio, (long long *)&config->temp);
-                    dbprintlf("Checkpoint.");
+                    phy_status_t status[1];
+                    memset(status, 0x0, sizeof(phy_config_t));
+                    adradio_get_tx_bw(global_data->radio, (long long *)&status->bw);
+                    adradio_get_tx_hardwaregain(global_data->radio, &status->gain);
+                    adradio_get_tx_lo(global_data->radio, (long long *)&status->LO);
+                    adradio_get_rssi(global_data->radio, &status->rssi);
+                    adradio_get_samp(global_data->radio, (long long *)&status->samp);
+                    adradio_get_temp(global_data->radio, (long long *)&status->temp);
                     char buf[32];
                     memset(buf, 0x0, 32);
                     adradio_get_ensm_mode(global_data->radio, buf, sizeof(buf));
                     if (strcmp(buf, "SLEEP") == 0)
                     {
-                        config->mode = 0;
+                        status->mode = 0;
                     }
                     else if (strcmp(buf, "FDD") == 0)
                     {
-                        config->mode = 1;
+                        status->mode = 1;
                     }
                     else if (strcmp(buf, "TDD") == 0)
                     {
-                        config->mode = 2;
+                        status->mode = 2;
                     }
                     else
                     {
-                        config->mode = -1;
+                        status->mode = -1;
                     }
+                    status->modem_ready = global_data->tx_modem_ready;
+                    status->PLL_ready = global_data->PLL_ready;
+                    status->radio_ready = global_data->radio_ready;
 
                     NetworkFrame *network_frame = new NetworkFrame(CS_TYPE_POLL_XBAND_CONFIG, sizeof(phy_config_t));
-                    network_frame->storePayload(CS_ENDPOINT_CLIENT, config, sizeof(phy_config_t));
+                    network_frame->storePayload(CS_ENDPOINT_CLIENT, status, sizeof(phy_config_t));
                     network_frame->sendFrame(network_data);
                     delete network_frame;
 
