@@ -338,5 +338,5 @@ void *gs_network_rx_thread(void *args)
     {
         global_data->network_data->thread_status = 0;
     }
-    return nullptr;
+    return NULL;
 }
