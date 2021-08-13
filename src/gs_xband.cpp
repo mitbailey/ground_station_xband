@@ -267,6 +267,7 @@ void *gs_network_rx_thread(void *args)
                     if (retval < 0)
                     {
                         // TODO: Send a packet notifying GUI client of a failed transmission. Status packet??
+                        dbprintlf(RED_FG "Failed to transmit.");
                     }
                     break;
                 }
