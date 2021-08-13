@@ -21,6 +21,12 @@
 
 int gs_xband_init(global_data_t *global_data)
 {
+    if (global_data->tx_modem_ready && global_data->radio_ready)
+    {
+        dbprintlf(YELLOW_FG "TX modem and radio marked as ready, but gs_xband_init(...) was called anyway. Canceling redundant initialization.");
+        return -1;
+    }
+
     if (!global_data->tx_modem_ready)
     {
         if (txmodem_init(global_data->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("rx_dma")) < 0)
