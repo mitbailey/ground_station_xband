@@ -204,6 +204,12 @@ void *gs_network_rx_thread(void *args)
                     case XBC_INIT_PLL:
                     {
                         dbprintlf("Received PLL Initialize command.");
+                        if (global_data->PLL_ready)
+                        {
+                            dbprintlf(YELLOW_FG "PLL already initialized, canceling.");
+                            break;
+                        }
+
                         if (adf4355_init(global_data->PLL) < 0)
                         {
                             dbprintlf(RED_FG "PLL initialization failure.");
@@ -222,6 +228,12 @@ void *gs_network_rx_thread(void *args)
                     case XBC_DISABLE_PLL:
                     {
                         dbprintlf("Received Disable PLL command.");
+                        if (!global_data->PLL_ready)
+                        {
+                            dbprintlf(YELLOW_FG "PLL already disabled, canceling.");
+                            break;
+                        }
+
                         if (adf4355_pw_down(global_data->PLL) < 0)
                         {
                             dbprintlf(RED_FG "PLL shutdown failure.");
@@ -229,6 +241,7 @@ void *gs_network_rx_thread(void *args)
                         else
                         {
                             dbprintlf(GREEN_FG "PLL shutdown success.");
+                            global_data->PLL_ready = false;
                         }
                         break;
                     }
