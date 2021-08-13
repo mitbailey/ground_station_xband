@@ -245,6 +245,7 @@ void *gs_network_rx_thread(void *args)
                         break;
                     }
                     }
+                    break;
                 }
                 case CS_TYPE_DATA:
                 {
