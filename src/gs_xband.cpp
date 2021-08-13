@@ -72,6 +72,12 @@ void *gs_network_rx_thread(void *args)
 {
     global_data_t *global_data = (global_data_t *)args;
     network_data_t *network_data = global_data->network_data;
+    global_data->PLL->spi_bus = 0;
+    global_data->PLL->spi_cs = 1;
+    global_data->PLL->spi_cs_internal = 1;
+    global_data->PLL->cs_gpio = -1;
+    global_data->PLL->single = 1;
+    global_data->PLL->muxval = 6;
 
     // Roof XBAND is a network client to the GS Server, and so should be very similar in socketry to ground_station.
 
