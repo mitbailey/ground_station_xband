@@ -60,7 +60,6 @@ typedef struct
     double gain;            // TX Gain
     char curr_gainmode[16]; // fast_attack or slow_attack
     bool pll_lock;
-    bool is_haystack;
     bool modem_ready;
     bool PLL_ready;
     bool radio_ready;
