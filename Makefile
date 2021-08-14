@@ -2,7 +2,7 @@ CXX = g++
 CC = gcc
 CPPOBJS = src/main.o src/gs_xband.o network/network.o
 COBJS = modem/src/libuio.o modem/src/libiio.o modem/src/adidma.o modem/src/txmodem.o adf4355/adf4355.o spibus/spibus.o gpiodev/gpiodev.o
-CXXFLAGS = -I ./ -I ./include/ -I ./modem/ -I ./modem/include/ -I ./network/ -I ./adf4355/ -I ./spibus/ -Wall -pthread -DGSNID=\"roofxband\"
+CXXFLAGS = -I ./ -I ./include/ -I ./modem/ -I ./modem/include/ -I ./network/ -I ./adf4355/ -I ./spibus/ -Wall -pthread -std=c++17 -DGSNID=\"roofxband\"
 TARGET = roof_xband.out
 LFLAGS = -lpthread -liio
 
