@@ -19,52 +19,52 @@
 #include "gs_xband.hpp"
 #include "meb_debug.hpp"
 
-int gs_xband_init(global_data_t *global_data)
+int gs_xband_init(global_data_t *global)
 {
-    if (global_data->tx_modem_ready && global_data->radio_ready)
+    if (global->tx_modem_ready && global->radio_ready)
     {
         dbprintlf(YELLOW_FG "TX modem and radio marked as ready, but gs_xband_init(...) was called anyway. Canceling redundant initialization.");
         return -1;
     }
 
-    if (!global_data->tx_modem_ready)
+    if (!global->tx_modem_ready)
     {
-        if (txmodem_init(global_data->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("rx_dma")) < 0)
+        if (txmodem_init(global->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("rx_dma")) < 0)
         {
             dbprintlf(RED_FG "TX modem initialization failure.");
             return -1;
         }
         dbprintlf(GREEN_FG "TX modem initialized.");
-        global_data->tx_modem_ready = true;
+        global->tx_modem_ready = true;
     }
 
-    if (!global_data->radio_ready)
+    if (!global->radio_ready)
     {
-        if (adradio_init(global_data->radio) < 0)
+        if (adradio_init(global->radio) < 0)
         {
             dbprintlf(RED_FG "Radio initialization failure.");
             return -3;
         }
         dbprintlf(GREEN_FG "Radio initialized.");
-        global_data->radio_ready = true;
+        global->radio_ready = true;
     }
 
     dbprintlf(GREEN_FG "Automatic initialization complete.");
     return 1;
 }
 
-int gs_xband_transmit(global_data_t *global_data, txmodem *dev, uint8_t *buf, ssize_t size)
+int gs_xband_transmit(global_data_t *global, txmodem *dev, uint8_t *buf, ssize_t size)
 {
-    if (!global_data->tx_modem_ready || !global_data->radio_ready)
+    if (!global->tx_modem_ready || !global->radio_ready)
     {
-        if (gs_xband_init(global_data) < 0)
+        if (gs_xband_init(global) < 0)
         {
             dbprintlf(RED_FG "Transmission aborted, radio not initialized.");
             return -1;
         }
     }
 
-    if (!global_data->PLL_ready)
+    if (!global->PLL_ready)
     {
         dbprintlf(RED_FG "Transmission aborted, PLL not initialized by GUI client operator.");
         return -2;
@@ -76,18 +76,18 @@ int gs_xband_transmit(global_data_t *global_data, txmodem *dev, uint8_t *buf, ss
 
 void *gs_network_rx_thread(void *args)
 {
-    global_data_t *global_data = (global_data_t *)args;
-    network_data_t *network_data = global_data->network_data;
-    global_data->PLL->spi_bus = 0;
-    global_data->PLL->spi_cs = 1;
-    global_data->PLL->spi_cs_internal = 1;
-    global_data->PLL->cs_gpio = -1;
-    global_data->PLL->single = 1;
-    global_data->PLL->muxval = 6;
+    global_data_t *global = (global_data_t *)args;
+    NetDataClient *network_data = global->network_data;
+    global->PLL->spi_bus = 0;
+    global->PLL->spi_cs = 1;
+    global->PLL->spi_cs_internal = 1;
+    global->PLL->cs_gpio = -1;
+    global->PLL->single = 1;
+    global->PLL->muxval = 6;
 
     // Roof XBAND is a network client to the GS Server, and so should be very similar in socketry to ground_station.
 
-    while (network_data->rx_active)
+    while (network_data->recv_active)
     {
         if (!network_data->connection_ready)
         {
@@ -97,9 +97,9 @@ void *gs_network_rx_thread(void *args)
 
         int read_size = 0;
 
-        while (read_size >= 0 && network_data->rx_active)
+        while (read_size >= 0 && network_data->recv_active)
         {
-            char buffer[sizeof(NetworkFrame) * 2];
+            char buffer[sizeof(NetFrame) * 2];
             memset(buffer, 0x0, sizeof(buffer));
 
             dbprintlf(BLUE_BG "Waiting to receive...");
@@ -116,21 +116,21 @@ void *gs_network_rx_thread(void *args)
                 printf("(END)\n");
 
                 // Parse the data by mapping it to a NetworkFrame.
-                NetworkFrame *network_frame = (NetworkFrame *)buffer;
+                NetFrame *network_frame = (NetFrame *)buffer;
 
                 // Check if we've received data in the form of a NetworkFrame.
-                if (network_frame->checkIntegrity() < 0)
+                if (network_frame->validate() < 0)
                 {
-                    dbprintlf("Integrity check failed (%d).", network_frame->checkIntegrity());
+                    dbprintlf("Integrity check failed (%d).", network_frame->validate());
                     continue;
                 }
                 dbprintlf("Integrity check successful.");
 
-                global_data->netstat = network_frame->getNetstat();
+                global->netstat = network_frame->getNetstat();
 
                 // For now, just print the Netstat.
                 uint8_t netstat = network_frame->getNetstat();
-                dbprintlf(BLUE_FG "NETWORK STATUS");
+                dbprintlf(BLUE_FG "NETWORK STATUS (%d)", netstat);
                 dbprintf("GUI Client ----- ");
                 ((netstat & 0x80) == 0x80) ? printf(GREEN_FG "ONLINE" RESET_ALL "\n") : printf(RED_FG "OFFLINE" RESET_ALL "\n");
                 dbprintf("Roof UHF ------- ");
@@ -139,6 +139,8 @@ void *gs_network_rx_thread(void *args)
                 ((netstat & 0x20) == 0x20) ? printf(GREEN_FG "ONLINE" RESET_ALL "\n") : printf(RED_FG "OFFLINE" RESET_ALL "\n");
                 dbprintf("Haystack ------- ");
                 ((netstat & 0x10) == 0x10) ? printf(GREEN_FG "ONLINE" RESET_ALL "\n") : printf(RED_FG "OFFLINE" RESET_ALL "\n");
+                dbprintf("Track ---------- ");
+                ((netstat & 0x8) == 0x8) ? printf(GREEN_FG "ONLINE" RESET_ALL "\n") : printf(RED_FG "OFFLINE" RESET_ALL "\n");
 
                 // Extract the payload into a buffer.
                 int payload_size = network_frame->getPayloadSize();
@@ -149,42 +151,31 @@ void *gs_network_rx_thread(void *args)
                     continue;
                 }
 
-                NETWORK_FRAME_TYPE type = network_frame->getType();
-                switch (type)
+                switch (network_frame->getType())
                 {
-                case CS_TYPE_ACK:
-                {
-                    dbprintlf(BLUE_FG "Received an ACK frame!");
-                    break;
-                }
-                case CS_TYPE_NACK:
-                {
-                    dbprintlf(BLUE_FG "Received a NACK frame!");
-                    break;
-                }
-                case CS_TYPE_CONFIG_XBAND:
+                case NetType::XBAND_CONFIG:
                 {
                     dbprintlf(BLUE_FG "Received an X-Band CONFIG frame!");
-                    if (!global_data->radio_ready)
+                    if (!global->radio_ready)
                     {
                         // TODO: Send a packet indicating this.
                         dbprintlf(RED_FG "Cannot configure radio: radio not ready, does not exist, or failed to initialize.");
                         break;
                     }
-                    if (network_frame->getEndpoint() == CS_ENDPOINT_ROOFXBAND)
+                    if (network_frame->getDestination() == NetVertex::ROOFXBAND)
                     {
                         phy_config_t *config = (phy_config_t *)payload;
 
                         // RECONFIGURE XBAND
-                        adradio_set_ensm_mode(global_data->radio, (ensm_mode)config->mode);
-                        adradio_set_tx_lo(global_data->radio, config->LO);
-                        adradio_set_samp(global_data->radio, config->samp);
-                        adradio_set_tx_bw(global_data->radio, config->bw);
+                        adradio_set_ensm_mode(global->radio, (ensm_mode)config->mode);
+                        adradio_set_tx_lo(global->radio, config->LO);
+                        adradio_set_samp(global->radio, config->samp);
+                        adradio_set_tx_bw(global->radio, config->bw);
                         char filter_name[256];
                         // TODO: Keep track of the return value of the load filter thing in the status.
                         snprintf(filter_name, sizeof(filter_name), "/home/sunip/%s.ftr", config->ftr_name);
-                        adradio_load_fir(global_data->radio, filter_name);
-                        adradio_set_tx_hardwaregain(global_data->radio, config->gain);
+                        adradio_load_fir(global->radio, filter_name);
+                        adradio_set_tx_hardwaregain(global->radio, config->gain);
                     }
                     else
                     {
@@ -192,7 +183,7 @@ void *gs_network_rx_thread(void *args)
                     }
                     break;
                 }
-                case CS_TYPE_XBAND_COMMAND:
+                case NetType::XBAND_COMMAND:
                 {
                     dbprintlf(BLUE_FG "Received an X-Band Radio command frame!");
                     XBAND_COMMAND *command = (XBAND_COMMAND *)payload;
@@ -202,44 +193,44 @@ void *gs_network_rx_thread(void *args)
                     case XBC_INIT_PLL:
                     {
                         dbprintlf("Received PLL Initialize command.");
-                        if (global_data->PLL_ready)
+                        if (global->PLL_ready)
                         {
                             dbprintlf(YELLOW_FG "PLL already initialized, canceling.");
                             break;
                         }
 
-                        if (adf4355_init(global_data->PLL) < 0)
+                        if (adf4355_init(global->PLL) < 0)
                         {
                             dbprintlf(RED_FG "PLL initialization failure.");
                         }
-                        else if (adf4355_set_tx(global_data->PLL) < 0)
+                        else if (adf4355_set_tx(global->PLL) < 0)
                         {
                             dbprintlf(RED_FG "PLL set TX failure.");
                         }
                         else
                         {
                             dbprintlf(GREEN_FG "PLL initialization success.");
-                            global_data->PLL_ready = true;
+                            global->PLL_ready = true;
                         }
                         break;
                     }
                     case XBC_DISABLE_PLL:
                     {
                         dbprintlf("Received Disable PLL command.");
-                        if (!global_data->PLL_ready)
+                        if (!global->PLL_ready)
                         {
                             dbprintlf(YELLOW_FG "PLL already disabled, canceling.");
                             break;
                         }
 
-                        if (adf4355_pw_down(global_data->PLL) < 0)
+                        if (adf4355_pw_down(global->PLL) < 0)
                         {
                             dbprintlf(RED_FG "PLL shutdown failure.");
                         }
                         else
                         {
                             dbprintlf(GREEN_FG "PLL shutdown success.");
-                            global_data->PLL_ready = false;
+                            global->PLL_ready = false;
                         }
                         break;
                     }
@@ -258,10 +249,10 @@ void *gs_network_rx_thread(void *args)
                     }
                     break;
                 }
-                case CS_TYPE_DATA:
+                case NetType::DATA:
                 {
                     dbprintlf(BLUE_FG "Received a DATA frame!");
-                    int retval = gs_xband_transmit(global_data, global_data->tx_modem, payload, payload_size);
+                    int retval = gs_xband_transmit(global, global->tx_modem, payload, payload_size);
                     if (retval < 0)
                     {
                         // TODO: Send a packet notifying GUI client of a failed transmission. Status packet??
@@ -269,58 +260,16 @@ void *gs_network_rx_thread(void *args)
                     }
                     break;
                 }
-                case CS_TYPE_POLL_XBAND_CONFIG:
+                case NetType::ACK:
                 {
-                    dbprintlf(BLUE_FG "Received a request for configuration information!");
-
-                    if (!global_data->radio_ready)
-                    {
-                        // TODO: Send a packet indicating this. Status packet??
-                        dbprintlf(RED_FG "Cannot get radio config: radio not ready, does not exist, or failed to initialize.");
-                        break;
-                    }
-
-                    phy_status_t status[1];
-                    memset(status, 0x0, sizeof(phy_config_t));
-                    adradio_get_tx_bw(global_data->radio, (long long *)&status->bw);
-                    adradio_get_tx_hardwaregain(global_data->radio, &status->gain);
-                    adradio_get_tx_lo(global_data->radio, (long long *)&status->LO);
-                    adradio_get_rssi(global_data->radio, &status->rssi);
-                    adradio_get_samp(global_data->radio, (long long *)&status->samp);
-                    adradio_get_temp(global_data->radio, (long long *)&status->temp);
-                    char buf[32];
-                    memset(buf, 0x0, 32);
-                    adradio_get_ensm_mode(global_data->radio, buf, sizeof(buf));
-                    if (strcmp(buf, "SLEEP") == 0)
-                    {
-                        status->mode = 0;
-                    }
-                    else if (strcmp(buf, "FDD") == 0)
-                    {
-                        status->mode = 1;
-                    }
-                    else if (strcmp(buf, "TDD") == 0)
-                    {
-                        status->mode = 2;
-                    }
-                    else
-                    {
-                        status->mode = -1;
-                    }
-                    status->modem_ready = global_data->tx_modem_ready;
-                    status->PLL_ready = global_data->PLL_ready;
-                    status->radio_ready = global_data->radio_ready;
-
-                    NetworkFrame *network_frame = new NetworkFrame(CS_TYPE_POLL_XBAND_CONFIG, sizeof(phy_config_t));
-                    network_frame->storePayload(CS_ENDPOINT_CLIENT, status, sizeof(phy_config_t));
-                    network_frame->sendFrame(network_data);
-                    delete network_frame;
-
+                    dbprintlf(BLUE_FG "Received an ACK frame!");
                     break;
                 }
-                case CS_TYPE_CONFIG_UHF:
-                case CS_TYPE_NULL:
-                case CS_TYPE_ERROR:
+                case NetType::NACK:
+                {
+                    dbprintlf(BLUE_FG "Received a NACK frame!");
+                    break;
+                }
                 default:
                 {
                     break;
@@ -336,32 +285,94 @@ void *gs_network_rx_thread(void *args)
         if (read_size == 0)
         {
             dbprintlf(RED_BG "Connection forcibly closed by the server.");
-            strcpy(network_data->discon_reason, "SERVER-FORCED");
+            strcpy(network_data->disconnect_reason, "SERVER-FORCED");
             network_data->connection_ready = false;
             continue;
         }
         else if (errno == EAGAIN)
         {
             dbprintlf(YELLOW_BG "Active connection timed-out (%d).", read_size);
-            strcpy(network_data->discon_reason, "TIMED-OUT");
+            strcpy(network_data->disconnect_reason, "TIMED-OUT");
             network_data->connection_ready = false;
             continue;
         }
         else if (errno == ETIMEDOUT)
         {
             dbprintlf(FATAL "ETIMEDOUT");
-            strcpy(network_data->discon_reason, "TIMED-OUT");
+            strcpy(network_data->disconnect_reason, "TIMED-OUT");
             network_data->connection_ready = false;
         }
         erprintlf(errno);
     }
 
-    network_data->rx_active = false;
+    network_data->recv_active = false;
     dbprintlf(FATAL "DANGER! NETWORK RECEIVE THREAD IS RETURNING!");
 
-    if (global_data->network_data->thread_status > 0)
+    if (global->network_data->thread_status > 0)
     {
-        global_data->network_data->thread_status = 0;
+        global->network_data->thread_status = 0;
+    }
+    return NULL;
+}
+
+void *xband_status_thread(void *args)
+{
+    global_data_t *global = (global_data_t *)args;
+    NetDataClient *network_data = global->network_data;
+
+    while (network_data->recv_active && network_data->thread_status > 0)
+    {
+        if (!global->radio_ready)
+        {
+            dbprintlf(RED_FG "Cannot send radio config: radio not ready, does not exist, or failed to initialize.");
+            continue;
+        }
+
+        if (network_data->connection_ready)
+        {
+            phy_status_t status[1];
+            memset(status, 0x0, sizeof(phy_status_t));
+            adradio_get_tx_bw(global->radio, (long long *)&status->bw);
+            adradio_get_tx_hardwaregain(global->radio, &status->gain);
+            adradio_get_tx_lo(global->radio, (long long *)&status->LO);
+            adradio_get_rssi(global->radio, &status->rssi);
+            adradio_get_samp(global->radio, (long long *)&status->samp);
+            adradio_get_temp(global->radio, (long long *)&status->temp);
+            char buf[32];
+            memset(buf, 0x0, 32);
+            adradio_get_ensm_mode(global->radio, buf, sizeof(buf));
+            if (strcmp(buf, "SLEEP") == 0)
+            {
+                status->mode = 0;
+            }
+            else if (strcmp(buf, "FDD") == 0)
+            {
+                status->mode = 1;
+            }
+            else if (strcmp(buf, "TDD") == 0)
+            {
+                status->mode = 2;
+            }
+            else
+            {
+                status->mode = -1;
+            }
+            status->modem_ready = global->tx_modem_ready;
+            status->PLL_ready = global->PLL_ready;
+            status->radio_ready = global->radio_ready;
+
+            NetFrame *status_frame = new NetFrame((unsigned char *)status, sizeof(phy_status_t), NetType::XBAND_DATA, NetVertex::CLIENT);
+            status_frame->sendFrame(network_data);
+            delete status_frame;
+        }
+
+        usleep(network_data->polling_rate SEC);
+    }
+
+    dbprintlf(FATAL "XBAND_STATUS_THREAD IS EXITING!");
+    if (network_data->thread_status > 0)
+    {
+        network_data->thread_status = 0;
     }
     return NULL;
 }

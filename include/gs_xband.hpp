@@ -78,7 +78,7 @@ typedef struct
     bool PLL_ready;
     bool radio_ready;
 
-    network_data_t network_data[1];
+    NetDataClient *network_data;
     uint8_t netstat;
 } global_data_t;
 
@@ -120,7 +120,7 @@ enum XBAND_COMMAND
  * @param global_data 
  * @return int 
  */
-int gs_xband_init(global_data_t *global_data);
+int gs_xband_init(global_data_t *global);
 
 /**
  * @brief Transmits over X-Band to SPACE-HAUC.
@@ -131,7 +131,7 @@ int gs_xband_init(global_data_t *global_data);
  * @param size 
  * @return int 
  */
-int gs_xband_transmit(global_data_t *global_data, txmodem *dev, uint8_t *buf, ssize_t size);
+int gs_xband_transmit(global_data_t *global, txmodem *dev, uint8_t *buf, ssize_t size);
 
 /**
  * @brief Listens for NetworkFrames from the Ground Station Network.
@@ -140,5 +140,11 @@ int gs_xband_transmit(global_data_t *global_data, txmodem *dev, uint8_t *buf, ss
  * @return void* 
  */
 void *gs_network_rx_thread(void *args);
+
+/**
+ * @brief Periodically sends X-Band status updates.
+ * 
+ */
+void *xband_status_thread(void *args);
 
 #endif // GS_XBAND_HPP

@@ -27,32 +27,32 @@ int main(int argc, char **argv)
     signal(SIGPIPE, SIG_IGN);
 
     // Set up global data.
-    global_data_t global_data[1] = {0};
-    network_data_init(global_data->network_data, SERVER_PORT);
-    global_data->network_data->rx_active = true;
-
-    // 1 = All good, 0 = recoverable failure, -1 = fatal failure (close program)
-    global_data->network_data->thread_status = 1;
+    global_data_t global[1] = {0};
+    global->network_data = new NetDataClient(NetPort::ROOFXBAND, SERVER_POLL_RATE);
+    global->network_data->recv_active = true;
 
     // Create Ground Station Network thread IDs.
-    pthread_t net_polling_tid, net_rx_tid;
+    pthread_t net_polling_tid, net_rx_tid, xband_status_tid;
 
     // Try to initialize radio. This is checked on every attempted transmit, and init() is re-called from there if necessary.
-    if (gs_xband_init(global_data) < 0)
+    if (gs_xband_init(global) < 0)
     {
         dbprintlf(RED_FG "Initial radio initialization failed!");
     }
 
     // Start the RX threads, and restart them should it be necessary.
     // Only gets-out if a thread declares an unrecoverable emergency and sets its status to -1.
-    while (global_data->network_data->thread_status > -1)
+    while (global->network_data->thread_status > -1)
     {
+        // 1 = All good, 0 = recoverable failure, -1 = fatal failure (close program)
+        global->network_data->thread_status = 1;
+
         // Initialize and begin socket communication to the server.
-        if (!global_data->network_data->connection_ready)
+        if (!global->network_data->connection_ready)
         {
             // TODO: Check if this is the desired functionality.
             // Currently, the program will not proceed past this point if it cannot connect to the server.
-            while (gs_connect_to_server(global_data->network_data) != 1)
+            while (gs_connect_to_server(global->network_data) != 1)
             {
                 dbprintlf(RED_FG "Failed to establish connection to the server.");
                 usleep(5 SEC);
@@ -60,25 +60,29 @@ int main(int argc, char **argv)
         }
 
         // Start the threads.
-        pthread_create(&net_polling_tid, NULL, gs_polling_thread, global_data->network_data);
-        pthread_create(&net_rx_tid, NULL, gs_network_rx_thread, global_data);
+        pthread_create(&net_polling_tid, NULL, gs_polling_thread, global->network_data);
+        pthread_create(&net_rx_tid, NULL, gs_network_rx_thread, global);
+        pthread_create(&xband_status_tid, NULL, xband_status_thread, global);
 
         void *thread_return;
         pthread_join(net_polling_tid, &thread_return);
         pthread_join(net_rx_tid, &thread_return);
+        pthread_join(xband_status_tid, &thread_return);
 
         // Loop will begin, restarting the threads.
     }
 
     // Shutdown the X-Band radio.
     // txmodem_stop(global_data->tx_modem);
-    txmodem_destroy(global_data->tx_modem);
-    adf4355_pw_down(global_data->PLL);
-    adf4355_destroy(global_data->PLL);
-    adradio_destroy(global_data->radio);
+    txmodem_destroy(global->tx_modem);
+    adf4355_pw_down(global->PLL);
+    adf4355_destroy(global->PLL);
+    adradio_destroy(global->radio);
 
     // Destroy other things.
-    close(global_data->network_data->socket);
+    close(global->network_data->socket);
 
-    return global_data->network_data->thread_status;
+    delete global->network_data;
+
+    return global->network_data->thread_status;
 }
