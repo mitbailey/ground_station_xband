@@ -371,6 +371,24 @@ void *xband_status_thread(void *args)
             status->PLL_ready = global->PLL_ready;
             status->radio_ready = global->radio_ready;
 
+            dbprintlf(GREEN_FG "Sending the following X-Band status data:");
+            dbprintlf(GREEN_FG "%d", status->mode);
+            dbprintlf(GREEN_FG "%d", status->pll_freq);
+            dbprintlf(GREEN_FG "%d", status->LO);
+            dbprintlf(GREEN_FG "%d", status->samp);
+            dbprintlf(GREEN_FG "%d", status->bw);
+            dbprintlf(GREEN_FG "%s", status->ftr_name);
+            dbprintlf(GREEN_FG "%d", status->temp);
+            dbprintlf(GREEN_FG "%f", status->rssi);
+            dbprintlf(GREEN_FG "%f", status->gain);
+            dbprintlf(GREEN_FG "%s", status->curr_gainmode);
+            dbprintlf(GREEN_FG "%d", status->pll_lock);
+            dbprintlf(GREEN_FG "%d", status->modem_ready);
+            dbprintlf(GREEN_FG "%d", status->PLL_ready);
+            dbprintlf(GREEN_FG "%d", status->radio_ready);
+            dbprintlf(GREEN_FG "%d", status->rx_armed);
+            dbprintlf(GREEN_FG "%d", status->MTU);
+
             NetFrame *status_frame = new NetFrame((unsigned char *)status, sizeof(phy_status_t), NetType::XBAND_DATA, NetVertex::CLIENT);
             status_frame->sendFrame(network_data);
             delete status_frame;
