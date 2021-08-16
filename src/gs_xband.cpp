@@ -71,7 +71,11 @@ int gs_xband_transmit(global_data_t *global, txmodem *dev, uint8_t *buf, ssize_t
     }
 
     dbprintlf(GREEN_FG "Transmitting to SPACE-HAUC...");
-    return txmodem_write(dev, buf, size);
+    global->transmitting = true;
+    int retval = txmodem_write(dev, buf, size);
+    global->transmitting = false;
+
+    return retval;
 }
 
 void *gs_network_rx_thread(void *args)
@@ -162,9 +166,16 @@ void *gs_network_rx_thread(void *args)
                         dbprintlf(RED_FG "Cannot configure radio: radio not ready, does not exist, or failed to initialize.");
                         break;
                     }
+
                     if (network_frame->getDestination() == NetVertex::ROOFXBAND)
                     {
                         phy_config_t *config = (phy_config_t *)payload;
+
+                        if (global->transmitting && config->mode == SLEEP)
+                        {
+                            dbprintlf(RED_BG "ATTENTION: CONFIGURATION ABORTED! CANNOT PUT RADIO TO SLEEP WHILE TRANSMITTING!");
+                            break;
+                        }
 
                         // RECONFIGURE XBAND
                         adradio_set_ensm_mode(global->radio, (ensm_mode)config->mode);

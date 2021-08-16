@@ -77,6 +77,8 @@ typedef struct
     bool PLL_ready;
     bool radio_ready;
 
+    bool transmitting;
+
     NetDataClient *network_data;
     uint8_t netstat;
 } global_data_t;
