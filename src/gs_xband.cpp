@@ -336,6 +336,7 @@ void *xband_status_thread(void *args)
         if (!global->radio_ready)
         {
             dbprintlf(RED_FG "Cannot send radio config: radio not ready, does not exist, or failed to initialize.");
+            usleep(2 SEC);
             continue;
         }
 
