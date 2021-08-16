@@ -382,7 +382,7 @@ void *xband_status_thread(void *args)
             dbprintlf(GREEN_FG "temp %d", status->temp);
             dbprintlf(GREEN_FG "rssi %f", status->rssi);
             dbprintlf(GREEN_FG "gain %f", status->gain);
-            dbprintlf(GREEN_FG "curr_gainmode %s", status->curr_gainmode);
+            // dbprintlf(GREEN_FG "curr_gainmode %s", status->curr_gainmode);
             dbprintlf(GREEN_FG "pll_lock %d", status->pll_lock);
             dbprintlf(GREEN_FG "modem_ready %d", status->modem_ready);
             dbprintlf(GREEN_FG "PLL_ready %d", status->PLL_ready);
