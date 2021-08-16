@@ -66,8 +66,7 @@ int gs_xband_transmit(global_data_t *global, txmodem *dev, uint8_t *buf, ssize_t
 
     if (!global->PLL_ready)
     {
-        dbprintlf(RED_FG "Transmission aborted, PLL not initialized by GUI client operator.");
-        return -2;
+        dbprintlf(YELLOW_FG "WARNING: PLL not initialized by GUI client operator.");
     }
 
     dbprintlf(GREEN_FG "Transmitting to SPACE-HAUC...");
