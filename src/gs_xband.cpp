@@ -352,15 +352,15 @@ void *xband_status_thread(void *args)
             memset(buf, 0x0, 32);
             adradio_get_ensm_mode(global->radio, buf, sizeof(buf));
             dbprintlf("Got ensm mode: %s", buf);
-            if (strcmp(buf, "SLEEP") == 0)
+            if (strcmp(buf, "sleep") == 0)
             {
                 status->mode = 0;
             }
-            else if (strcmp(buf, "FDD") == 0)
+            else if (strcmp(buf, "fdd") == 0)
             {
                 status->mode = 1;
             }
-            else if (strcmp(buf, "TDD") == 0)
+            else if (strcmp(buf, "tdd") == 0)
             {
                 status->mode = 2;
             }
