@@ -332,12 +332,22 @@ void *xband_status_thread(void *args)
         {
             phy_status_t status[1];
             memset(status, 0x0, sizeof(phy_status_t));
-            adradio_get_tx_bw(global->radio, (long long *)&status->bw);
+            long long tmp = 0;
+
+            adradio_get_tx_bw(global->radio, &tmp);
+            status->bw = (uint64_t)tmp;
+
             adradio_get_tx_hardwaregain(global->radio, &status->gain);
-            adradio_get_tx_lo(global->radio, (long long *)&status->LO);
+            adradio_get_tx_lo(global->radio, &tmp);
+            status->LO = (uint64_t)tmp;
+
             adradio_get_rssi(global->radio, &status->rssi);
-            adradio_get_samp(global->radio, (long long *)&status->samp);
-            adradio_get_temp(global->radio, (long long *)&status->temp);
+            adradio_get_samp(global->radio, &tmp);
+            status->samp = (uint64_t)tmp;
+
+            adradio_get_temp(global->radio, &tmp);
+            status->temp = (int)tmp;
+
             char buf[32];
             memset(buf, 0x0, 32);
             adradio_get_ensm_mode(global->radio, buf, sizeof(buf));
