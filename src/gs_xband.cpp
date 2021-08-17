@@ -34,6 +34,7 @@ int gs_xband_init(global_data_t *global)
             dbprintlf(RED_FG "TX modem initialization failure.");
             return -1;
         }
+        txmodem_reset(global->tx_modem, 0x0);
         dbprintlf(GREEN_FG "TX modem initialized.");
         global->tx_modem_ready = true;
     }
