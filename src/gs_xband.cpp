@@ -71,6 +71,7 @@ int gs_xband_transmit(global_data_t *global, txmodem *dev, uint8_t *buf, ssize_t
     }
 
     dbprintlf(GREEN_FG "Transmitting %d bytes to SPACE-HAUC...", size);
+    dbprintlf(GREEN_FG "MTU is %d.", dev->mtu);
     for (int i = 0; i < size; i++)
     {
         printf("%02x", buf[i]);
