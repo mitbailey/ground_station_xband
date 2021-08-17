@@ -69,7 +69,12 @@ int gs_xband_transmit(global_data_t *global, txmodem *dev, uint8_t *buf, ssize_t
         dbprintlf(YELLOW_FG "WARNING: PLL not initialized by GUI client operator.");
     }
 
-    dbprintlf(GREEN_FG "Transmitting to SPACE-HAUC...");
+    dbprintlf(GREEN_FG "Transmitting %d bytes to SPACE-HAUC...", size);
+    for (int i = 0; i < size; i++)
+    {
+        printf("%02x", buf[i]);
+    }
+    printf("\n");
     global->transmitting = true;
     int retval = txmodem_write(dev, buf, size);
     global->transmitting = false;
