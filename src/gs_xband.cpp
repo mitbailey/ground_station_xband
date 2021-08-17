@@ -29,7 +29,7 @@ int gs_xband_init(global_data_t *global)
 
     if (!global->tx_modem_ready)
     {
-        if (txmodem_init(global->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("rx_dma")) < 0)
+        if (txmodem_init(global->tx_modem, uio_get_id("tx_ipcore"), uio_get_id("tx_dma")) < 0)
         {
             dbprintlf(RED_FG "TX modem initialization failure.");
             return -1;
