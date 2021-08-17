@@ -186,6 +186,7 @@ void *gs_network_rx_thread(void *args)
                         snprintf(filter_name, sizeof(filter_name), "/home/sunip/%s.ftr", config->ftr_name);
                         adradio_load_fir(global->radio, filter_name);
                         adradio_set_tx_hardwaregain(global->radio, config->gain);
+                        global->tx_modem->mtu = config->MTU;
                     }
                     else
                     {
@@ -350,6 +351,7 @@ void *xband_status_thread(void *args)
             adradio_get_rssi(global->radio, &status->rssi);
             adradio_get_samp(global->radio, (long long *)&status->samp);
             adradio_get_temp(global->radio, (long long *)&status->temp);
+            status->MTU = global->tx_modem->mtu;
 
             char buf[32];
             memset(buf, 0x0, 32);
