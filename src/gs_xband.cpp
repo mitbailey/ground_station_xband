@@ -73,6 +73,7 @@ int gs_xband_transmit(global_data_t *global, txmodem *dev, uint8_t *buf, ssize_t
     global->transmitting = true;
     int retval = txmodem_write(dev, buf, size);
     global->transmitting = false;
+    dbprintlf(GREEN_FG "TRANSMITTED WITH RETURN VALUE: %d", retval);
 
     return retval;
 }
