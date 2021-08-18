@@ -64,9 +64,9 @@ typedef struct
     bool PLL_ready;
     bool radio_ready;
     bool rx_armed;
-    int last_rx_status;
-    int last_read_status;
     uint32_t MTU;
+    int32_t last_rx_status;
+    int32_t last_read_status;
 } phy_status_t;
 
 typedef struct
