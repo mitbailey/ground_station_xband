@@ -18,6 +18,7 @@
 // #include "libiio.h"
 #include "gs_xband.hpp"
 #include "meb_debug.hpp"
+#include "phy.hpp"
 
 int gs_xband_init(global_data_t *global)
 {

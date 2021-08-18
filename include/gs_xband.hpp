@@ -21,54 +21,6 @@
 #define SEC *1000000
 #define SERVER_PORT 54220
 
-/**
- * @brief Sent to Roof X-Band / Haystack for configurations.
- * 
- */
-typedef struct
-{
-    // libiio.h: ensm_mode
-    int mode;               // SLEEP, FDD, TDD 
-    int pll_freq;           // PLL Frequency
-    int64_t LO;            // LO freq
-    int64_t samp;          // sampling rate
-    int64_t bw;            // bandwidth
-    char ftr_name[64];      // filter name
-    int64_t temp;               // temperature
-    double rssi;            // RSSI
-    double gain;            // TX Gain
-    char curr_gainmode[16]; // fast_attack or slow_attack
-    bool pll_lock;
-    uint32_t MTU;
-} phy_config_t;
-
-/**
- * @brief Sent to GUI client for status updates.
- * 
- */
-typedef struct
-{
-    // libiio.h: ensm_mode
-    int mode;               // SLEEP, FDD, TDD 
-    int pll_freq;           // PLL Frequency
-    int64_t LO;            // LO freq
-    int64_t samp;          // sampling rate
-    int64_t bw;            // bandwidth
-    char ftr_name[64];      // filter name
-    int64_t temp;               // temperature
-    double rssi;            // RSSI
-    double gain;            // TX Gain
-    char curr_gainmode[16]; // fast_attack or slow_attack
-    bool pll_lock;
-    bool modem_ready;
-    bool PLL_ready;
-    bool radio_ready;
-    bool rx_armed;
-    uint32_t MTU;
-    int32_t last_rx_status;
-    int32_t last_read_status;
-} phy_status_t;
-
 typedef struct
 {
     txmodem tx_modem[1];
