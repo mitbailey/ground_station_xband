@@ -120,7 +120,7 @@ void *gs_network_rx_thread(void *args)
 
             dbprintlf("Read %d bytes.", read_size);
 
-            if (read_size > 0)
+            if (read_size >= 0)
             {
                 dbprintlf("Received the following NetFrame:");
                 netframe->print();
