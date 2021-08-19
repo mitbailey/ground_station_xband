@@ -80,6 +80,9 @@ int gs_xband_transmit(global_data_t *global, txmodem *dev, uint8_t *buf, ssize_t
     printf("\n");
     global->transmitting = true;
     // size_t mtu = global->tx_modem->mtu;
+
+    dbprintlf("\n\n %p =?= %p \n\n", dev, global->tx_modem);
+
     // !WARN! TX Modem must be reset prior to every transmission.
     txmodem_reset(global->tx_modem, 0x0);
     // global->tx_modem->mtu = mtu;
