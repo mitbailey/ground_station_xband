@@ -24,7 +24,7 @@ int gs_xband_init(global_data_t *global)
 {
     if (global->tx_modem_ready && global->radio_ready)
     {
-        dbprintlf(YELLOW_FG "TX modem and radio marked as ready, but gs_xband_init(...) was called anyway. Canceling redundant initialization.");
+        dbprintlf(YELLOW_FG "TX modem and radio marked as ready, but gs_xband_init(...) was called anyway. Cancelling redundant initialization.");
         return -1;
     }
 
@@ -250,6 +250,7 @@ void *gs_network_rx_thread(void *args)
                 {
                     dbprintlf(BLUE_FG "Received a DATA frame!");
                     int retval = gs_xband_transmit(global, global->tx_modem, payload, payload_size);
+                    
                     if (retval < 0)
                     {
                         // TODO: Send a packet notifying GUI client of a failed transmission. Status packet??
